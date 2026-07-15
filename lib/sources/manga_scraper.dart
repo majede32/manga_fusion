@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-// 1. تعريف موديل المانجا المطلوبة في واجهة التطبيق
+// 1. الموديلات المطلوبة لواجهة التطبيق
 class MangaModel {
   final String title;
   final String mangaUrl;
@@ -22,7 +22,6 @@ class MangaModel {
   }
 }
 
-// 2. تعريف موديل الفصول المطلوبة في واجهة التطبيق
 class ChapterModel {
   final String title;
   final String chapterUrl;
@@ -40,6 +39,7 @@ class ChapterModel {
   }
 }
 
+// 2. كائن تعريف المصدر وميزاته الأمنية لتفادي مشكلة الإنترنت
 class MangaSource {
   final String name;
   final String baseUrl;
@@ -53,7 +53,7 @@ class MangaSource {
 }
 
 class MangaScraper {
-  // المصادر العربية المتاحة
+  // المصادر العربية الموثوقة من مشاريعنا السابقة
   static final List<MangaSource> sources = [
     MangaSource(
       name: "مانجا ليك (MangaLek)",
@@ -68,7 +68,7 @@ class MangaScraper {
       name: "أوليمبوس (Olympus)",
       baseUrl: "https://olympustaff.com",
       headers: {
-        "User-Agent": "Mozilla/5.0 (Linux; Android 13; SM-S901B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Referer": "https://olympustaff.com/",
       },
     ),
@@ -82,6 +82,7 @@ class MangaScraper {
     ),
   ];
 
+  // المصدر الحالي النشط بالتطبيق
   static MangaSource activeSource = sources[0];
 
   static void changeSource(int index) {
@@ -90,7 +91,7 @@ class MangaScraper {
     }
   }
 
-  // 3. جلب أحدث المانجا المترجمة (تطابق متطلبات main.dart)
+  // 3. دالة جلب أحدث المانجا المحدثة بالتطبيق
   Future<List<MangaModel>> fetchLatestManga() async {
     try {
       final response = await http.get(
@@ -106,14 +107,13 @@ class MangaScraper {
       }
     } catch (e) {
       print("Error in fetchLatestManga: $e");
-      // Fallback في حال تعطل المصدر الأساسي، نجلب من أوليمبوس تلقائياً
       return _fetchFallbackLatest();
     }
   }
 
-  // دالة جلب احتياطية لتفادي انقطاع الاتصال
+  // نظام الجلب الاحتياطي السريع (في حال تعطل المصدر الأساسي)
   Future<List<MangaModel>> _fetchFallbackLatest() async {
-    final fallback = sources[1];
+    final fallback = sources[1]; // أوليمبوس كإحتياطي أول
     try {
       final response = await http.get(
         Uri.parse("${fallback.baseUrl}/api/manga/updates?page=1"),
@@ -125,13 +125,12 @@ class MangaScraper {
         return data.map((json) => MangaModel.fromJson(json)).toList();
       }
     } catch (_) {}
-    return []; // مصفوفة فارغة لتجنب تحطم التطبيق
+    return [];
   }
 
-  // 4. جلب فصول المانجا المحددة (تطابق متطلبات main.dart)
+  // 4. جلب قائمة فصول المانجا المحددة
   Future<List<ChapterModel>> fetchMangaChapters(String mangaUrl) async {
     try {
-      // إرسال الطلب لروابط الفصول مع تمرير رابط المانجا كمعامل أو مسار
       final encodedUrl = Uri.encodeComponent(mangaUrl);
       final response = await http.get(
         Uri.parse("${activeSource.baseUrl}/api/manga/chapters?url=$encodedUrl"),
@@ -148,7 +147,7 @@ class MangaScraper {
     return [];
   }
 
-  // 5. جلب صور الفصل للقراءة (تطابق متطلبات main.dart)
+  // 5. جلب روابط صور الفصل للقراءة
   Future<List<String>> fetchChapterImages(String chapterUrl) async {
     try {
       final encodedUrl = Uri.encodeComponent(chapterUrl);
