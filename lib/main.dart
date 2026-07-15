@@ -84,7 +84,7 @@ class _MangaHomeScreenState extends State<MangaHomeScreen> {
                   borderRadius: BorderRadius.circular(8),
                   child: GridTile(
                     footer: Container(
-                      color: Colors.blackDE,
+                      color: Colors.black87,
                       padding: const EdgeInsets.all(8),
                       child: Text(
                         manga.title,
