@@ -7,8 +7,12 @@ class RemoteConfigService {
 
   static Future<Map<String, dynamic>?> updateManifest() async {
     try {
-      // تم حذف الـ headers والـ token لضمان الأمان والعمل مع المستودع العام
-      final response = await http.get(Uri.parse(manifestUrl));
+      final headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
+        'Accept': 'application/json',
+      };
+      
+      final response = await http.get(Uri.parse(manifestUrl), headers: headers);
       
       if (response.statusCode == 200) {
         final manifest = jsonDecode(response.body);
