@@ -7,19 +7,15 @@ class RemoteConfigService {
 
   static Future<Map<String, dynamic>?> updateManifest() async {
     try {
+      // تم حذف الـ headers والـ token لضمان الأمان والعمل مع المستودع العام
       final response = await http.get(Uri.parse(manifestUrl));
       
       if (response.statusCode == 200) {
         final manifest = jsonDecode(response.body);
-        
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('last_updated', manifest['last_updated'] ?? 'unknown');
         await prefs.setString('manifest_data', response.body);
-        
-        print("✅ تم تحميل التحديث بنجاح من المسار الجديد");
+        print("✅ تم تحميل التحديث بنجاح");
         return manifest;
-      } else {
-        print("❌ فشل التحميل: رمز الخطأ ${response.statusCode}");
       }
     } catch (e) {
       print("خطأ في الاتصال: $e");
