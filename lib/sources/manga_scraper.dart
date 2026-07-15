@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-// 1. الموديلات المطلوبة لواجهة التطبيق
+// 1. الموديلات المطلوبة لواجهة التطبيق لضمان نجاح البناء
 class MangaModel {
   final String title;
   final String mangaUrl;
@@ -15,9 +15,9 @@ class MangaModel {
 
   factory MangaModel.fromJson(Map<String, dynamic> json) {
     return MangaModel(
-      title: json['title'] ?? json['name'] ?? 'بدون عنوان',
-      mangaUrl: json['mangaUrl'] ?? json['link'] ?? '',
-      imageUrl: json['imageUrl'] ?? json['image'] ?? json['cover'] ?? '',
+      title: json['title'] ?? 'بدون عنوان',
+      mangaUrl: json['mangaUrl'] ?? '',
+      imageUrl: json['imageUrl'] ?? '',
     );
   }
 }
@@ -33,13 +33,12 @@ class ChapterModel {
 
   factory ChapterModel.fromJson(Map<String, dynamic> json) {
     return ChapterModel(
-      title: json['title'] ?? json['name'] ?? 'فصل غير مسمى',
-      chapterUrl: json['chapterUrl'] ?? json['link'] ?? '',
+      title: json['title'] ?? 'فصل غير مسمى',
+      chapterUrl: json['chapterUrl'] ?? '',
     );
   }
 }
 
-// 2. كائن تعريف المصدر وميزاته الأمنية لتفادي مشكلة الإنترنت
 class MangaSource {
   final String name;
   final String baseUrl;
@@ -53,7 +52,7 @@ class MangaSource {
 }
 
 class MangaScraper {
-  // المصادر العربية الموثوقة من مشاريعنا السابقة
+  // قائمة المصادر المعتمدة مع الترويسات الأمنية لتجاوز الحظر
   static final List<MangaSource> sources = [
     MangaSource(
       name: "مانجا ليك (MangaLek)",
@@ -61,7 +60,6 @@ class MangaScraper {
       headers: {
         "User-Agent": "Mozilla/5.0 (Linux; Android 13; SM-S901B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36",
         "Referer": "https://mangalek.com/",
-        "Accept": "application/json, text/plain, */*",
       },
     ),
     MangaSource(
@@ -82,7 +80,6 @@ class MangaScraper {
     ),
   ];
 
-  // المصدر الحالي النشط بالتطبيق
   static MangaSource activeSource = sources[0];
 
   static void changeSource(int index) {
@@ -91,19 +88,54 @@ class MangaScraper {
     }
   }
 
-  // 3. دالة جلب أحدث المانجا المحدثة بالتطبيق
+  // دالة جلب قائمة المانجا عبر تحليل كود الصفحة (RegExp) لتفادي أخطاء الـ API
   Future<List<MangaModel>> fetchLatestManga() async {
     try {
       final response = await http.get(
-        Uri.parse("${activeSource.baseUrl}/api/manga/updates?page=1"),
+        Uri.parse(activeSource.baseUrl),
         headers: activeSource.headers,
       ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map((json) => MangaModel.fromJson(json)).toList();
+        final List<MangaModel> mangas = [];
+        final htmlContent = response.body;
+
+        // تعبير نمطي ذكي لاستخراج روابط وعناوين وصور المانجا من الهيكل الشائع للمواقع الثلاثة
+        final regExp = RegExp(
+          r'href="([^"]*?/manga/[^"]*?)".*?title="([^"]*?)".*?src="([^"]*?)"',
+          dotAll: true,
+        );
+
+        final matches = regExp.allMatches(htmlContent);
+        for (var match in matches) {
+          final url = match.group(1) ?? '';
+          final title = match.group(2) ?? '';
+          final img = match.group(3) ?? '';
+
+          if (url.isNotEmpty && !mangas.any((m) => m.mangaUrl == url)) {
+            mangas.add(MangaModel(
+              title: title.trim(),
+              mangaUrl: url.startsWith('http') ? url : "${activeSource.baseUrl}$url",
+              imageUrl: img.startsWith('http') ? img : "${activeSource.baseUrl}$img",
+            ));
+          }
+        }
+
+        // إذا كان التحليل بالـ RegExp الأساسي فارغاً، نستخدم تعبيراً احتياطياً مرناً
+        if (mangas.isEmpty) {
+          final fallbackRegExp = RegExp(r'class="post-title".*?href="([^"]*?)">([^<]*?)<.*?src="([^"]*?)"', dotAll: true);
+          for (var match in fallbackRegExp.allMatches(htmlContent)) {
+            mangas.add(MangaModel(
+              title: match.group(2)?.trim() ?? 'مانجا',
+              mangaUrl: match.group(1) ?? '',
+              imageUrl: match.group(3) ?? '',
+            ));
+          }
+        }
+
+        return mangas;
       } else {
-        throw Exception("فشل الاتصال بـ ${activeSource.name}");
+        throw Exception("فشل جلب الصفحة: ${response.statusCode}");
       }
     } catch (e) {
       print("Error in fetchLatestManga: $e");
@@ -111,35 +143,55 @@ class MangaScraper {
     }
   }
 
-  // نظام الجلب الاحتياطي السريع (في حال تعطل المصدر الأساسي)
+  // الجلب الاحتياطي من أوليمبوس بنفس تقنية RegExp
   Future<List<MangaModel>> _fetchFallbackLatest() async {
-    final fallback = sources[1]; // أوليمبوس كإحتياطي أول
+    final fallback = sources[1];
     try {
       final response = await http.get(
-        Uri.parse("${fallback.baseUrl}/api/manga/updates?page=1"),
+        Uri.parse(fallback.baseUrl),
         headers: fallback.headers,
       ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map((json) => MangaModel.fromJson(json)).toList();
+        final List<MangaModel> mangas = [];
+        final regExp = RegExp(r'href="([^"]*?/manga/[^"]*?)".*?title="([^"]*?)"', dotAll: true);
+        for (var match in regExp.allMatches(response.body)) {
+          mangas.add(MangaModel(
+            title: match.group(2)?.trim() ?? 'عنوان احتياطي',
+            mangaUrl: match.group(1) ?? '',
+            imageUrl: '',
+          ));
+        }
+        return mangas;
       }
     } catch (_) {}
     return [];
   }
 
-  // 4. جلب قائمة فصول المانجا المحددة
+  // دالة جلب الفصول عبر تحليل روابط فصول الصفحة مباشرة
   Future<List<ChapterModel>> fetchMangaChapters(String mangaUrl) async {
     try {
-      final encodedUrl = Uri.encodeComponent(mangaUrl);
       final response = await http.get(
-        Uri.parse("${activeSource.baseUrl}/api/manga/chapters?url=$encodedUrl"),
+        Uri.parse(mangaUrl),
         headers: activeSource.headers,
       ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return data.map((json) => ChapterModel.fromJson(json)).toList();
+        final List<ChapterModel> chapters = [];
+        // نمط لاستخراج روابط الفصول وعناوينها
+        final regExp = RegExp(r'href="([^"]*?/chapter/[^"]*?)".*?>([^<]*?فصل[^<]*?)<', dotAll: true);
+        
+        for (var match in regExp.allMatches(response.body)) {
+          final url = match.group(1) ?? '';
+          final title = match.group(2)?.trim() ?? 'فصل جديد';
+          if (url.isNotEmpty && !chapters.any((c) => c.chapterUrl == url)) {
+            chapters.add(ChapterModel(
+              title: title,
+              chapterUrl: url.startsWith('http') ? url : "${activeSource.baseUrl}$url",
+            ));
+          }
+        }
+        return chapters;
       }
     } catch (e) {
       print("Error in fetchMangaChapters: $e");
@@ -147,18 +199,26 @@ class MangaScraper {
     return [];
   }
 
-  // 5. جلب روابط صور الفصل للقراءة
+  // دالة جلب صور الفصل باستخدام تحليل وسوم الـ img في صفحة الفصل
   Future<List<String>> fetchChapterImages(String chapterUrl) async {
     try {
-      final encodedUrl = Uri.encodeComponent(chapterUrl);
       final response = await http.get(
-        Uri.parse("${activeSource.baseUrl}/api/chapter/images?url=$encodedUrl"),
+        Uri.parse(chapterUrl),
         headers: activeSource.headers,
       ).timeout(const Duration(seconds: 20));
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        return List<String>.from(data);
+        final List<String> images = [];
+        // استخراج وسوم الصور التي تحوي روابط قراءة المانجا داخل الصفحة
+        final regExp = RegExp(r'src="([^"]*?(?:uploads|images|wp-content)[^"]*?\.(?:jpg|jpeg|png|webp))"', caseSensitive: false);
+
+        for (var match in regExp.allMatches(response.body)) {
+          final imgUrl = match.group(1) ?? '';
+          if (imgUrl.isNotEmpty && !images.contains(imgUrl)) {
+            images.add(imgUrl.startsWith('http') ? imgUrl : "${activeSource.baseUrl}$imgUrl");
+          }
+        }
+        return images;
       }
     } catch (e) {
       print("Error in fetchChapterImages: $e");
