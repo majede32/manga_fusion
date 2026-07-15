@@ -88,7 +88,7 @@ class _MangaHomeScreenState extends State<MangaHomeScreen> {
       appBar: AppBar(
         title: const Text(
           'MANGA FUSION',
-          style: TextStyle(fontWeight: FontWeight.black, letterSpacing: 1.5, color: Colors.redAccent),
+          style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.5, color: Colors.redAccent),
         ),
         centerTitle: true,
         backgroundColor: const Color(0xFF161616),
@@ -158,7 +158,7 @@ class _MangaHomeScreenState extends State<MangaHomeScreen> {
                           ),
                           const SizedBox(height: 4),
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.between,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
                                 "Ch. ${manga.lastChapter}",
@@ -311,7 +311,7 @@ class MangaReaderScreen extends StatelessWidget {
         itemBuilder: (context, index) {
           return CachedNetworkImage(
             imageUrl: pages[index],
-            fit: BoxFit.width, // عرض الصورة بملء عرض الشاشة وملاءمتها طولياً تلقائياً
+            fit: BoxFit.fitWidth, // عرض الصورة بملء عرض الشاشة وملاءمتها طولياً تلقائياً
             placeholder: (context, url) => Container(
               height: 400,
               color: const Color(0xFF0F0F0F),
