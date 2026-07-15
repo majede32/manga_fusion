@@ -53,27 +53,32 @@ class MangaSource {
 class MangaScraper {
   static final List<MangaSource> sources = [
     MangaSource(
-      name: "MangaLek",
-      baseUrl: "https://mangalek.com",
+      name: "GateManga",
+      baseUrl: "https://gatemanga.com",
       headers: {
-        "User-Agent": "Mozilla/5.0 (Linux; Android 13; SM-S901B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36",
-        "Referer": "https://mangalek.com/",
-      },
-    ),
-    MangaSource(
-      name: "Olympus",
-      baseUrl: "https://olympustaff.com",
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Referer": "https://olympustaff.com/",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Language": "ar,en-US;q=0.9,en;q=0.8",
+        "Referer": "https://gatemanga.com/",
       },
     ),
     MangaSource(
       name: "3asq",
       baseUrl: "https://3asq.org",
       headers: {
-        "User-Agent": "Mozilla/5.0 (Linux; Android 13; SM-S901B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/119.0",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "ar,en-US;q=0.7,en;q=0.3",
         "Referer": "https://3asq.org/",
+      },
+    ),
+    MangaSource(
+      name: "Olympus",
+      baseUrl: "https://olympustaff.com",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+        "Referer": "https://olympustaff.com/",
       },
     ),
   ];
@@ -97,7 +102,7 @@ class MangaScraper {
         final List<MangaModel> mangas = [];
         final htmlContent = response.body;
 
-        // Optimized Regex to match common Madara theme structures
+        // Optimized flexible Regex to scrape manga data safely from main page
         final regExp = RegExp(
           r'href="([^"]*?/manga/[^"]*?)".*?title="([^"]*?)".*?src="([^"]*?)"',
           dotAll: true,
@@ -118,21 +123,22 @@ class MangaScraper {
           }
         }
 
-        // Fallback parser if main regex yields empty results
+        // Secondary fallback RegExp
         if (mangas.isEmpty) {
           final fallbackRegExp = RegExp(
-            r'class="post-title".*?href="([^"]*?)">([^<]*?)<.*?src="([^"]*?)"', 
+            r'href="([^"]*?/manga/[^"]*?)">([^<]+?)</a>', 
             dotAll: true
           );
           for (var match in fallbackRegExp.allMatches(htmlContent)) {
             final url = match.group(1) ?? '';
             final title = match.group(2)?.trim() ?? 'Manga';
-            final img = match.group(3) ?? '';
-            mangas.add(MangaModel(
-              title: title,
-              mangaUrl: url,
-              imageUrl: img,
-            ));
+            if (!mangas.any((m) => m.mangaUrl == url)) {
+              mangas.add(MangaModel(
+                title: title,
+                mangaUrl: url.startsWith('http') ? url : "${activeSource.baseUrl}$url",
+                imageUrl: '',
+              ));
+            }
           }
         }
 
@@ -156,7 +162,7 @@ class MangaScraper {
 
       if (response.statusCode == 200) {
         final List<MangaModel> mangas = [];
-        final regExp = RegExp(r'href="([^"]*?/manga/[^"]*?)".*?title="([^"]*?)"', dotAll: true);
+        final regExp = RegExp(r'href="([^"]*?/manga/[^"]*?)".*?>([^<]+?)</a>', dotAll: true);
         for (var match in regExp.allMatches(response.body)) {
           final url = match.group(1) ?? '';
           mangas.add(MangaModel(
@@ -180,13 +186,11 @@ class MangaScraper {
 
       if (response.statusCode == 200) {
         final List<ChapterModel> chapters = [];
-        // Extract chapters links safely
         final regExp = RegExp(r'href="([^"]*?/chapter/[^"]*?)"', dotAll: true);
         
         for (var match in regExp.allMatches(response.body)) {
           final url = match.group(1) ?? '';
           if (url.isNotEmpty && !chapters.any((c) => c.chapterUrl == url)) {
-            // Generate friendly title from URL segments if not found in text
             final uri = Uri.parse(url);
             final segment = uri.pathSegments.isNotEmpty ? uri.pathSegments.last : 'chapter';
             chapters.add(ChapterModel(
@@ -212,7 +216,6 @@ class MangaScraper {
 
       if (response.statusCode == 200) {
         final List<String> images = [];
-        // Extract all images dynamically from the chapter HTML page
         final regExp = RegExp(r'src="([^"]*?(?:uploads|images|wp-content)[^"]*?\.(?:jpg|jpeg|png|webp))"', caseSensitive: false);
 
         for (var match in regExp.allMatches(response.body)) {
