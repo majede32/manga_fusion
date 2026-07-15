@@ -1,100 +1,48 @@
+import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:html/parser.dart' as parser;
 
-class MangaModel {
-  final String title;
-  final String imageUrl;
-  final String mangaUrl;
+class MangaSource {
+  final String name;
+  final String baseUrl;
+  final Map<String, String> headers;
+  final String language = "Arabic"; // التركيز على المحتوى العربي
 
-  MangaModel({required this.title, required this.imageUrl, required this.mangaUrl});
-}
-
-class ChapterModel {
-  final String title;
-  final String chapterUrl;
-
-  ChapterModel({required this.title, required this.chapterUrl});
+  MangaSource({
+    required this.name,
+    required this.baseUrl,
+    required this.headers,
+  });
 }
 
 class MangaScraper {
-  // موقع مصدر مانجا تجريبي نشط (يمكن تغييره للمصدر المطلوب لاحقاً)
-  final String baseUrl = "https://mangalek.com"; 
+  // قائمة المصادر العربية الموثوقة
+  static final List<MangaSource> sources = [
+    MangaSource(
+      name: "مانجا ليك (MangaLek)",
+      baseUrl: "https://mangalek.com",
+      headers: {"User-Agent": "Mozilla/5.0 (Linux; Android 13; SM-S901B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36"},
+    ),
+    MangaSource(
+      name: "أوليمبوس (Olympus Scans)",
+      baseUrl: "https://olympustaff.com",
+      headers: {"User-Agent": "Mozilla/5.0 (Linux; Android 13; SM-S901B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36"},
+    ),
+    MangaSource(
+      name: "عشق (3asq)",
+      baseUrl: "https://3asq.org",
+      headers: {"User-Agent": "Mozilla/5.0 (Linux; Android 13; SM-S901B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Mobile Safari/537.36"},
+    ),
+  ];
 
-  // 1. جلب قائمة المانجا الأحدث من الصفحة الرئيسية
-  Future<List<MangaModel>> fetchLatestManga() async {
-    List<MangaModel> mangaList = [];
-    try {
-      final response = await http.get(Uri.parse(baseUrl), headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      });
-      if (response.statusCode == 200) {
-        var document = parser.parse(response.body);
-        // استهداف الكروت الخاصة بالمانجا في هيكل HTML للموقع
-        var cards = document.querySelectorAll('.manga-card, .manga-item, .entry'); 
-        for (var card in cards) {
-          var titleElement = card.querySelector('.title, h3, .manga-name a');
-          var imgElement = card.querySelector('img');
-          var linkElement = card.querySelector('a');
+  static MangaSource activeSource = sources[0];
 
-          if (titleElement != null && linkElement != null) {
-            mangaList.add(MangaModel(
-              title: titleElement.text.trim(),
-              imageUrl: imgElement?.attributes['src'] ?? imgElement?.attributes['data-src'] ?? '',
-              mangaUrl: linkElement.attributes['href'] ?? '',
-            ));
-          }
-        }
-      }
-    } catch (e) {
-      print("Error fetching latest manga: $e");
+  // دالة لجلب المانجا مع التزام بهوية الموقع
+  static Future<String> getMangaData(String endpoint) async {
+    final url = Uri.parse("${activeSource.baseUrl}$endpoint");
+    final response = await http.get(url, headers: activeSource.headers);
+    if (response.statusCode == 200) {
+      return response.body;
     }
-    return mangaList;
-  }
-
-  // 2. جلب قائمة فصول مانجا معينة عند الضغط عليها
-  Future<List<ChapterModel>> fetchMangaChapters(String mangaUrl) async {
-    List<ChapterModel> chapters = [];
-    try {
-      final response = await http.get(Uri.parse(mangaUrl), headers: {
-        'User-Agent': 'Mozilla/5.0'
-      });
-      if (response.statusCode == 200) {
-        var document = parser.parse(response.body);
-        var elements = document.querySelectorAll('.chapter-item, .chapters-list a, .wp-manga-chapter a');
-        for (var element in elements) {
-          var title = element.text.trim();
-          var url = element.attributes['href'] ?? '';
-          if (url.isNotEmpty) {
-            chapters.add(ChapterModel(title: title, chapterUrl: url));
-          }
-        }
-      }
-    } catch (e) {
-      print("Error fetching chapters: $e");
-    }
-    return chapters;
-  }
-
-  // 3. جلب صفحات الصور الخاصة بالفصل لقراءتها
-  Future<List<String>> fetchChapterImages(String chapterUrl) async {
-    List<String> images = [];
-    try {
-      final response = await http.get(Uri.parse(chapterUrl), headers: {
-        'User-Agent': 'Mozilla/5.0'
-      });
-      if (response.statusCode == 200) {
-        var document = parser.parse(response.body);
-        var imgElements = document.querySelectorAll('.page-break img, .reading-content img, .vung-doc img');
-        for (var img in imgElements) {
-          var src = img.attributes['src'] ?? img.attributes['data-src'] ?? img.attributes['data-lazy-src'] ?? '';
-          if (src.isNotEmpty) {
-            images.add(src.trim());
-          }
-        }
-      }
-    } catch (e) {
-      print("Error fetching images: $e");
-    }
-    return images;
+    throw Exception("فشل جلب البيانات من ${activeSource.name}");
   }
 }
