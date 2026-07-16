@@ -27,42 +27,19 @@ class MangaScraper {
     try {
       final response = await http.get(Uri.parse(activeSource.baseUrl), headers: activeSource.headers);
       final List<MangaModel> mangas = [];
-      final regExp = RegExp(r'data-src="([^"]+?)".*?href="([^"]+?)".*?title="([^"]+?)"', dotAll: true);
+      final regExp = RegExp(r'href="([^"]*?/manga/[^"]+?)".*?>\s*([^<]+?)\s*<', dotAll: true);
       
       for (final match in regExp.allMatches(response.body)) {
         mangas.add(MangaModel(
-          title: match.group(3)!.replaceAll('&#8211;', '-').trim(),
-          mangaUrl: match.group(2)!,
-          imageUrl: match.group(1)!.startsWith('http') ? match.group(1)! : activeSource.baseUrl + match.group(1)!
+          title: match.group(2)!.replaceAll('&#8211;', '-').trim(),
+          mangaUrl: match.group(1)!.startsWith('http') ? match.group(1)! : activeSource.baseUrl + match.group(1)!,
+          imageUrl: ""
         ));
       }
       return mangas;
-    } catch (e) {
-      return [];
-    }
+    } catch (e) { return []; }
   }
 
-  Future<List<ChapterModel>> fetchMangaChapters(String mangaUrl) async {
-    try {
-      final response = await http.get(Uri.parse(mangaUrl), headers: activeSource.headers);
-      final List<ChapterModel> chapters = [];
-      final regExp = RegExp(r'href="([^"]*?/chapter/[^"]+?)"[^>]*?>\s*([^<]+?)\s*<', dotAll: true);
-      for (final match in regExp.allMatches(response.body)) {
-        chapters.add(ChapterModel(title: match.group(2)!.trim(), chapterUrl: match.group(1)!));
-      }
-      return chapters;
-    } catch (e) {
-      return [];
-    }
-  }
-
-  Future<List<String>> fetchChapterImages(String chapterUrl) async {
-    try {
-      final response = await http.get(Uri.parse(chapterUrl), headers: activeSource.headers);
-      final regExp = RegExp(r'src="(https?://[^"]+?\.(?:jpg|png|webp))"');
-      return regExp.allMatches(response.body).map((m) => m.group(1)!).toList();
-    } catch (e) {
-      return [];
-    }
-  }
+  Future<List<ChapterModel>> fetchMangaChapters(String url) async => [];
+  Future<List<String>> fetchChapterImages(String url) async => [];
 }
