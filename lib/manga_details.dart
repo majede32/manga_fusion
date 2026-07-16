@@ -13,7 +13,8 @@ class MangaDetailsPage extends StatelessWidget {
       body: Column(
         children: [
           Container(
-            height: 300,
+            height: 250,
+            width: double.infinity,
             child: CachedNetworkImage(imageUrl: manga.imageUrl, fit: BoxFit.cover),
           ),
           Expanded(
@@ -25,10 +26,8 @@ class MangaDetailsPage extends StatelessWidget {
                   itemCount: snapshot.data!.length,
                   itemBuilder: (context, i) => ListTile(
                     title: Text(snapshot.data![i].title),
-                    onTap: () {
-                      // هنا سيتم ربط قارئ الصور لاحقاً
-                      print("فتح الفصل: ${snapshot.data![i].chapterUrl}");
-                    },
+                    trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () => print("فتح الفصل: ${snapshot.data![i].chapterUrl}"),
                   ),
                 );
               },
