@@ -1,3 +1,4 @@
+import "main_screen.dart";
 import 'package:flutter/material.dart';
 import 'sources/manga_scraper.dart';
 
