@@ -18,7 +18,7 @@ class MangaSource {
 
 class MangaScraper {
   static final List<MangaSource> sources = [
-    MangaSource(name: "3asq", baseUrl: "https://3asq.org", headers: {"User-Agent": "Mozilla/5.0"}),
+    MangaSource(name: "3asq", baseUrl: "https://3asq.online", headers: {"User-Agent": "Mozilla/5.0"}),
   ];
   static MangaSource activeSource = sources[0];
 
