@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'sources/manga_scraper.dart';
 
 class MainScreen extends StatefulWidget {
@@ -9,9 +10,7 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
   List<MangaModel> _mangas = [];
-  List<MangaModel> _filteredMangas = [];
   bool _isLoading = true;
-  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -24,107 +23,37 @@ class _MainScreenState extends State<MainScreen> {
     final data = await MangaScraper().fetchLatestManga();
     setState(() {
       _mangas = data;
-      _filteredMangas = data;
       _isLoading = false;
     });
-  }
-
-  void _search(String query) {
-    setState(() {
-      if (query.isEmpty) {
-        _filteredMangas = _mangas;
-      } else {
-        _filteredMangas = _mangas.where((m) => m.title.toLowerCase().contains(query.toLowerCase())).toList();
-      }
-    });
-  }
-
-  Widget _buildHome() {
-    return RefreshIndicator(
-      onRefresh: _refreshMangas,
-      color: Colors.deepPurple,
-      child: _isLoading 
-        ? Center(child: CircularProgressIndicator(color: Colors.deepPurple))
-        : _filteredMangas.isEmpty 
-            ? Center(child: Text("لا توجد مانجا، جرب التحديث"))
-            : GridView.builder(
-                padding: EdgeInsets.all(8),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2, 
-                  childAspectRatio: 0.65,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10
-                ),
-                itemCount: _filteredMangas.length,
-                itemBuilder: (context, i) {
-                  final manga = _filteredMangas[i];
-                  return Card(
-                    color: Color(0xFF1E1E1E),
-                    clipBehavior: Clip.antiAlias,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 5,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: manga.imageUrl.isNotEmpty
-                              ? Image.network(manga.imageUrl, fit: BoxFit.cover,
-                                  errorBuilder: (c, e, s) => Icon(Icons.broken_image, size: 50, color: Colors.grey))
-                              : Icon(Icons.image, size: 50, color: Colors.grey),
-                        ),
-                        Container(
-                          padding: EdgeInsets.all(10),
-                          child: Text(
-                            manga.title, 
-                            maxLines: 2, 
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: _currentIndex == 1 
-          ? TextField(
-              controller: _searchController,
-              style: TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: "ابحث عن مانجا...", 
-                hintStyle: TextStyle(color: Colors.grey),
-                border: InputBorder.none,
+      appBar: AppBar(title: Text("Manga Fusion")),
+      body: _isLoading ? Center(child: CircularProgressIndicator()) : GridView.builder(
+        padding: EdgeInsets.all(10),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.65, crossAxisSpacing: 10, mainAxisSpacing: 10),
+        itemCount: _mangas.length,
+        itemBuilder: (context, i) => GestureDetector(
+          onTap: () => print("تم الضغط على: ${_mangas[i].title}"), // هنا سيتم فتح صفحة الفصول لاحقاً
+          child: Column(children: [
+            Expanded(child: ClipRRect(borderRadius: BorderRadius.circular(8),
+              child: CachedNetworkImage(
+                imageUrl: _mangas[i].imageUrl,
+                httpHeaders: {"Referer": "https://3asq.online/"},
+                fit: BoxFit.cover,
+                placeholder: (c, u) => Container(color: Colors.grey[800]),
+                errorWidget: (c, u, e) => Icon(Icons.broken_image),
               ),
-              onChanged: _search,
-              autofocus: true,
-            )
-          : Text("Manga Fusion", style: TextStyle(fontWeight: FontWeight.bold)),
+            )),
+            Padding(padding: EdgeInsets.only(top: 5), child: Text(_mangas[i].title, maxLines: 1, overflow: TextOverflow.ellipsis)),
+          ]),
+        ),
       ),
-      body: _currentIndex == 2 
-          ? Center(child: Text("الإعدادات - قريباً"))
-          : _buildHome(),
       bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Color(0xFF1E1E1E),
-        selectedItemColor: Colors.deepPurpleAccent,
-        unselectedItemColor: Colors.grey,
         currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-            if (index != 1) {
-              _searchController.clear();
-              _search('');
-            }
-          });
-        },
+        onTap: (index) => setState(() => _currentIndex = index),
         items: [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "الرئيسية"),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: "بحث"),
