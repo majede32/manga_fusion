@@ -31,7 +31,7 @@ class MangaScraper {
         mangas.add(MangaModel(
           title: (match.group(4) ?? "Manga").replaceAll("&#8211;", "-").trim(),
           mangaUrl: match.group(3) ?? "",
-          imageUrl: match.group(1) ?? match.group(2) ?? ""
+          imageUrl: (match.group(1) ?? match.group(2) ?? "").startsWith("http") ? (match.group(1) ?? match.group(2) ?? "") : activeSource.baseUrl + (match.group(1) ?? match.group(2) ?? "")
         ));
       }
       return mangas;

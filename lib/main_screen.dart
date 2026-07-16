@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'sources/manga_scraper.dart'; // استيراد السكرايبر
+import 'sources/manga_scraper.dart';
 
 class MainScreen extends StatefulWidget {
   @override
@@ -10,6 +10,7 @@ class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
   List<MangaModel> _mangas = [];
   bool _isLoading = true;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -19,8 +20,7 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> _refreshMangas() async {
     setState(() => _isLoading = true);
-    final scraper = MangaScraper();
-    final data = await scraper.fetchLatestManga();
+    final data = await MangaScraper().fetchLatestManga();
     setState(() {
       _mangas = data;
       _isLoading = false;
@@ -30,21 +30,18 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("المانجا المحدثة")),
-      body: _currentIndex == 0 
-        ? RefreshIndicator(
-            onRefresh: _refreshMangas,
-            child: _isLoading 
-              ? Center(child: CircularProgressIndicator())
-              : ListView.builder(
-                  itemCount: _mangas.length,
-                  itemBuilder: (context, i) => ListTile(
-                    title: Text(_mangas[i].title),
-                    leading: _mangas[i].imageUrl.isNotEmpty ? Image.network(_mangas[i].imageUrl, width: 50) : Icon(Icons.book),
-                  ),
-                ),
-          )
-        : Center(child: Text("قريباً: البحث والإعدادات")),
+      appBar: _currentIndex == 1 ? AppBar(title: TextField(controller: _searchController, decoration: InputDecoration(hintText: "بحث..."), onSubmitted: (val) => print("بحث عن: $val"))) : AppBar(title: Text("Manga Fusion")),
+      body: _isLoading ? Center(child: CircularProgressIndicator()) : GridView.builder(
+        padding: EdgeInsets.all(8),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.7),
+        itemCount: _mangas.length,
+        itemBuilder: (context, i) => Card(
+          child: Column(children: [
+            Expanded(child: _mangas[i].imageUrl.isNotEmpty ? Image.network(_mangas[i].imageUrl, fit: BoxFit.cover) : Icon(Icons.broken_image)),
+            Padding(padding: EdgeInsets.all(8), child: Text(_mangas[i].title, maxLines: 1, overflow: TextOverflow.ellipsis)),
+          ]),
+        ),
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
