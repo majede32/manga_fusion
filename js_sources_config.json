@@ -1,26 +1,17 @@
 {
-  "version": "1.0.1",
-  "schema_version": 1,
-  "runtime_api_version": "1.0",
-  "manifest_version": "2026.07.16-dev",
-  "last_updated": "2026-07-16T00:30:00Z",
-  "repository": {
-    "owner": "majede32",
-    "repo": "manga_fusion",
-    "branch": "main"
-  },
+  "version": "1.0.2",
   "sources": {
     "azora": {
       "id": "azora",
-      "name": "أزورا مانجا (Azora)",
-      "version": "1.0.0",
+      "name": "أزورا مانجا",
       "enabled": true,
-      "base_url": "https://azorafly.com",
-      "script": {
-        "url": "sources/azora/source.js",
-        "sha256": "e59c2876686a569e49b6acd022191e8f322e6a79d83f28b99f8db41f18989c63",
-        "entry": "createSource"
-      }
+      "base_url": "https://azorafly.com"
+    },
+    "gmanga": {
+      "id": "gmanga",
+      "name": "جي مانجا",
+      "enabled": true,
+      "base_url": "https://gmanga.org"
     }
   }
 }
