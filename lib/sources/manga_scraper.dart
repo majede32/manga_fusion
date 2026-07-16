@@ -26,17 +26,20 @@ class MangaScraper {
     try {
       final response = await http.get(Uri.parse(activeSource.baseUrl), headers: activeSource.headers);
       final List<MangaModel> mangas = [];
-      // البحث عن أي رابط يحتوي على /manga/ مع العنوان
-      final regExp = RegExp(r'href="([^"]*?/manga/[^"]+?)".*?>\s*([^<]+?)\s*<', dotAll: true);
-      final matches = regExp.allMatches(response.body);
-      for (var match in matches) {
+      final regExp = RegExp(r"data-src=\""([^\""]+?)\""|src=\""([^\""]+?)\""".*?href=\""([^\""]+?)\""".*?title=\""([^\""]+?)\""", dotAll: true);
+      for (var match in regExp.allMatches(response.body)) {
         mangas.add(MangaModel(
-          title: match.group(2)!.trim(),
-          mangaUrl: match.group(1)!.startsWith('http') ? match.group(1)! : "${activeSource.baseUrl}${match.group(1)}",
-          imageUrl: "" // سنقوم بتطويرها لاحقاً
+          title: (match.group(4) ?? "Manga").replaceAll("&#8211;", "-").trim(),
+          mangaUrl: match.group(3) ?? "",
+          imageUrl: match.group(1) ?? match.group(2) ?? ""
         ));
       }
       return mangas;
+    } catch (e) {
+      print("Error: $e");
+      return [];
+    }
+  }
     } catch (e) {
       print("Error: $e");
       return [];
